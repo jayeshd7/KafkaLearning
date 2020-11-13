@@ -7,10 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class ProducerDemo {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
 
         final Logger logger = LoggerFactory.getLogger(ProducerDemo.class);
         String bootStrapServer = "127.0.0.1:9092";
@@ -32,9 +33,14 @@ public class ProducerDemo {
         boolean useNumbers = false;
 
         for(int i = 0 ; i<10;i++) {
-            String generatedString = RandomStringUtils.random(length, useLetters, useNumbers);
+            String value = RandomStringUtils.random(length, useLetters, useNumbers) + Integer.toString(i);
+            String topic = "first_topic";
+            String key = "ID_" + Integer.toString(i);
 
-            final ProducerRecord<String, String> record = new ProducerRecord<String, String>("first_topic", generatedString);
+            logger.info("Key :" + key);
+
+
+            final ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, key,  value );
 
             //step -4 send the data (async)
             //producer.send(record);
@@ -45,7 +51,9 @@ public class ProducerDemo {
                     //run every time record is successfully sent
 
                     if (e == null) {
-                        logger.info("received new meta data . \n" + "Topic :" + recordMetadata.topic() + "\n" + "Offset :" + recordMetadata.offset() + "\n" +
+                        logger.info("received new meta data . \n" + "Topic :" + recordMetadata.topic() + "\n" +
+                                "Partitions :" + recordMetadata.partition() + "\n" +
+                                "Offset :" + recordMetadata.offset() + "\n" +
                                 "Timestamp :" + recordMetadata.timestamp());
 
                     } else {
@@ -53,7 +61,7 @@ public class ProducerDemo {
                     }
 
                 }
-            });
+            }).get(); //block the send  to make synchronous -
 
         }
         //flush and close the producer
